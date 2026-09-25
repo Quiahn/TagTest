@@ -1,14 +1,388 @@
-<ins class='dcmads' style='display:inline-block;width:728px;height:90px'
-    data-dcm-placement='N2623706.2396926COFFEEDIGITAL/B35884646.448487466'
-    data-dcm-rendering-mode='script'
-    data-dcm-https-only
-    data-dcm-api-frameworks='[APIFRAMEWORKS]'
-    data-dcm-omid-partner='[OMIDPARTNER]'
-    data-dcm-gdpr-applies='gdpr=${GDPR}'
-    data-dcm-gdpr-consent='gdpr_consent=${GDPR_CONSENT_755}'
-    data-dcm-addtl-consent='addtl_consent=${ADDTL_CONSENT}'
-    data-dcm-ltd='false'
-    data-dcm-resettable-device-id=''
-    data-dcm-app-id=''>
-  <script src='https://www.googletagservices.com/dcm/dcmads.js'></script>
-</ins>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MRAID tag tester</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F4; --panel:#FFFFFF; --ink:#1C2430; --muted:#5B6878; --line:#D5DBE2;
+  --accent:#2F5BEA; --ok:#16875A; --warn:#B46A00; --err:#C4302B; --stage:#DDE3EA;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+h1{font-size:20px;font-weight:600;margin:4px 0 2px}
+.sub{color:var(--muted);margin:0 0 14px;font-size:14px}
+.grid{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:900px){.grid{grid-template-columns:380px 1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+label{display:block;font-size:13px;font-weight:500;color:var(--muted);margin:10px 0 4px}
+input,select,textarea{width:100%;font:inherit;font-size:16px;padding:9px 10px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink)}
+textarea{min-height:110px;font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:13px}
+.row{display:flex;gap:8px}
+.row>*{flex:1}
+.seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{flex:1;border:0;background:#fff;padding:9px 6px;font:inherit;font-size:14px;color:var(--ink);cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.btn{display:inline-block;border:0;border-radius:7px;padding:10px 14px;font:inherit;font-weight:500;cursor:pointer;background:var(--accent);color:#fff}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.hint{font-size:13px;color:var(--muted);margin:6px 0 0}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.stage{background:var(--stage);border-radius:10px;min-height:320px;display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto;position:relative}
+.slot{background:#fff;box-shadow:0 0 0 1px var(--line);position:relative;max-width:100%}
+.slot iframe{border:0;display:block;width:100%;height:100%}
+.empty{color:var(--muted);text-align:center;max-width:32ch}
+.overlay{position:fixed;inset:0;background:rgba(10,14,20,.88);z-index:50;display:none;align-items:center;justify-content:center}
+.overlay.on{display:flex}
+.overlay .host{position:relative;background:#fff}
+.xbtn{position:absolute;top:calc(8px + env(safe-area-inset-top,0px));right:8px;width:50px;height:50px;border-radius:25px;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:24px;cursor:pointer;z-index:60}
+.status{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{font-size:12px;padding:3px 8px;border-radius:20px;background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.chip b{color:var(--ink);font-weight:600}
+.log{margin-top:14px;background:#141A22;color:#D7DEE7;border-radius:10px;font:12px/1.5 "IBM Plex Mono",ui-monospace,Menlo,monospace;height:260px;overflow:auto;padding:10px}
+.log div{white-space:pre-wrap;word-break:break-word;border-bottom:1px solid #222B36;padding:2px 0}
+.log .t{color:#7C8898}
+.log .mraid{color:#8FB4FF}.log .ev{color:#7FD8A8}.log .err{color:#FF8A84}.log .warn{color:#F2C46B}
+.loghead{display:flex;justify-content:space-between;align-items:center;margin-top:14px}
+.loghead h2{font-size:15px;margin:0;font-weight:600}
+.small{font-size:13px;padding:6px 10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>MRAID tag tester</h1>
+  <p class="sub">Loads an ad tag into a frame with a mock <code>mraid</code> object already in place, so the creative thinks it's in an MRAID container.</p>
+ 
+  <div class="grid">
+    <div class="panel">
+      <label>Tag type</label>
+      <div class="seg" id="modeSeg">
+        <button type="button" data-mode="script" aria-pressed="true">Script URL</button>
+        <button type="button" data-mode="html" aria-pressed="false">HTML page URL</button>
+        <button type="button" data-mode="paste" aria-pressed="false">Paste tag</button>
+      </div>
+ 
+      <div id="urlBox">
+        <label for="url">Tag URL</label>
+        <input id="url" type="url" inputmode="url" autocomplete="off" placeholder="https://adserver.example.com/tag.js?…">
+        <p class="hint" id="modeHint">Loaded as a &lt;script src&gt;, which isn't subject to CORS. document.write tags work.</p>
+      </div>
+      <div id="pasteBox" hidden>
+        <label for="markup">Tag markup</label>
+        <textarea id="markup" placeholder="<script src=&quot;mraid.js&quot;></script>&#10;<div id=&quot;ad&quot;>…</div>"></textarea>
+      </div>
+ 
+      <div class="row">
+        <div>
+          <label for="size">Size</label>
+          <select id="size">
+            <option value="320x50">320×50 banner</option>
+            <option value="300x250" selected>300×250 MREC</option>
+            <option value="728x90">728×90 leaderboard</option>
+            <option value="320x480">320×480 interstitial</option>
+            <option value="full">Full screen</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div>
+          <label for="placement">Placement</label>
+          <select id="placement">
+            <option value="inline">inline</option>
+            <option value="interstitial">interstitial</option>
+          </select>
+        </div>
+      </div>
+      <div class="row" id="customBox" hidden>
+        <div><label for="w">Width</label><input id="w" type="number" value="300"></div>
+        <div><label for="h">Height</label><input id="h" type="number" value="250"></div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="ver">MRAID version</label>
+          <select id="ver"><option>3.0</option><option>2.0</option><option>1.0</option></select>
+        </div>
+        <div>
+          <label for="readyDelay">Ready delay (ms)</label>
+          <input id="readyDelay" type="number" value="100">
+        </div>
+      </div>
+ 
+      <div class="actions">
+        <button class="btn" id="load">Load tag</button>
+        <button class="btn ghost" id="copy">Copy share link</button>
+      </div>
+      <p class="hint" id="copyMsg" aria-live="polite"></p>
+ 
+      <label>Simulate</label>
+      <div class="actions" style="margin-top:0">
+        <button class="btn ghost small" id="toggleView">Viewable: on</button>
+        <button class="btn ghost small" id="fireReady">Fire ready</button>
+        <button class="btn ghost small" id="forceClose">Close ad</button>
+      </div>
+      <div class="status" id="status"></div>
+    </div>
+ 
+    <div>
+      <div class="stage" id="stage"><p class="empty">Enter a tag URL and choose Load tag. The creative shows up here.</p></div>
+      <div class="loghead"><h2>Log</h2><button class="btn ghost small" id="clear">Clear</button></div>
+      <div class="log" id="log" role="log"></div>
+    </div>
+  </div>
+</div>
+ 
+<div class="overlay" id="overlay"><div class="host" id="overlayHost"></div><button class="xbtn" id="xbtn" aria-label="Close">×</button></div>
+ 
+<script>
+(function(){
+const $ = id => document.getElementById(id);
+let mode = 'script', frame = null, viewable = true;
+const state = { state:'loading', size:null };
+ 
+/* ---------- logging ---------- */
+function log(msg, cls){
+  const d = document.createElement('div');
+  const t = new Date().toISOString().slice(11,23);
+  d.innerHTML = '<span class="t">'+t+'</span> ';
+  const s = document.createElement('span'); s.className = cls||''; s.textContent = msg;
+  d.appendChild(s); $('log').appendChild(d); $('log').scrollTop = 1e9;
+}
+window.__mraidHost = {
+  log, onCall: handleCall, getInfo: () => info()
+};
+ 
+/* ---------- UI ---------- */
+const hints = {
+  script:'Loaded as a <script src>, which isn\'t subject to CORS. document.write tags work.',
+  html:'Fetched and injected so mraid can be added. If the server blocks CORS, it falls back to a plain iframe without mraid.'
+};
+$('modeSeg').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  setMode(b.dataset.mode);
+});
+function setMode(m){
+  mode = m;
+  [...$('modeSeg').children].forEach(b=>b.setAttribute('aria-pressed', b.dataset.mode===m));
+  $('urlBox').hidden = m==='paste'; $('pasteBox').hidden = m!=='paste';
+  if(hints[m]) $('modeHint').textContent = hints[m];
+}
+$('size').addEventListener('change', ()=>{ $('customBox').hidden = $('size').value!=='custom'; });
+ 
+function dims(){
+  const v = $('size').value;
+  if(v==='full') return {w:window.innerWidth, h:window.innerHeight, full:true};
+  if(v==='custom') return {w:+$('w').value||300, h:+$('h').value||250};
+  const [w,h] = v.split('x').map(Number); return {w,h};
+}
+function info(){
+  const d = state.size || dims();
+  return {
+    version:$('ver').value, placement:$('placement').value, state:state.state,
+    viewable, w:d.w, h:d.h, sw:window.screen.width, sh:window.screen.height,
+    mw:window.innerWidth, mh:window.innerHeight
+  };
+}
+function renderStatus(){
+  const i = info();
+  $('status').innerHTML = ['state','placement','version'].map(k=>'<span class="chip">'+k+': <b>'+i[k]+'</b></span>').join('')
+    + '<span class="chip">size: <b>'+i.w+'×'+i.h+'</b></span><span class="chip">viewable: <b>'+viewable+'</b></span>';
+}
+ 
+/* ---------- mraid shim (runs inside the ad frame) ---------- */
+function shimSource(){
+  return `(function(){
+var H = parent.__mraidHost, L = {}, st = 'loading';
+var expP = {width:0,height:0,useCustomClose:false,isModal:true};
+var resP = {width:0,height:0,offsetX:0,offsetY:0,customClosePosition:'top-right',allowOffscreen:true};
+var oriP = {allowOrientationChange:true,forceOrientation:'none'};
+function I(){ return H.getInfo(); }
+function fmt(a){ try{return Array.prototype.map.call(a,function(x){return typeof x==='function'?'fn':JSON.stringify(x)}).join(', ')}catch(e){return ''} }
+function call(n,a,r){ H.log('mraid.'+n+'('+fmt(a)+')'+(r!==undefined?' → '+JSON.stringify(r):''),'mraid'); return r; }
+function fire(ev){ var args=[].slice.call(arguments,1); H.log('event '+ev+' '+JSON.stringify(args),'ev');
+  (L[ev]||[]).slice().forEach(function(f){ try{ f.apply(null,args) }catch(e){ H.log('listener error ('+ev+'): '+e.message,'err') } }); }
+var m = window.mraid = {
+  getVersion:function(){ return call('getVersion',[],I().version) },
+  getState:function(){ return call('getState',[],st) },
+  getPlacementType:function(){ return call('getPlacementType',[],I().placement) },
+  isViewable:function(){ return call('isViewable',[],I().viewable) },
+  addEventListener:function(e,f){ (L[e]=L[e]||[]).push(f); call('addEventListener',[e]);
+    if(e==='ready' && st!=='loading'){ setTimeout(function(){ try{f()}catch(x){} },0) } },
+  removeEventListener:function(e,f){ call('removeEventListener',[e]); if(!L[e])return; L[e]=f?L[e].filter(function(x){return x!==f}):[] },
+  open:function(u){ call('open',[u]); H.onCall('open',u) },
+  close:function(){ call('close',[]); H.onCall('close') },
+  unload:function(){ call('unload',[]); H.onCall('close') },
+  expand:function(u){ call('expand',[u]); H.onCall('expand',{url:u,props:expP}) },
+  resize:function(){ call('resize',[]); H.onCall('resize',resP) },
+  useCustomClose:function(b){ expP.useCustomClose=!!b; call('useCustomClose',[b]); H.onCall('customClose',!!b) },
+  getExpandProperties:function(){ var i=I(); if(!expP.width){expP.width=i.mw;expP.height=i.mh} return call('getExpandProperties',[],expP) },
+  setExpandProperties:function(p){ for(var k in p) expP[k]=p[k]; call('setExpandProperties',[p]); if('useCustomClose' in p) H.onCall('customClose',!!p.useCustomClose) },
+  getResizeProperties:function(){ return call('getResizeProperties',[],resP) },
+  setResizeProperties:function(p){ for(var k in p) resP[k]=p[k]; call('setResizeProperties',[p]) },
+  getOrientationProperties:function(){ return call('getOrientationProperties',[],oriP) },
+  setOrientationProperties:function(p){ for(var k in p) oriP[k]=p[k]; call('setOrientationProperties',[p]) },
+  getScreenSize:function(){ var i=I(); return call('getScreenSize',[],{width:i.sw,height:i.sh}) },
+  getMaxSize:function(){ var i=I(); return call('getMaxSize',[],{width:i.mw,height:i.mh}) },
+  getDefaultPosition:function(){ var i=I(); return call('getDefaultPosition',[],{x:0,y:0,width:i.w,height:i.h}) },
+  getCurrentPosition:function(){ var i=I(); return call('getCurrentPosition',[],{x:0,y:0,width:innerWidth,height:innerHeight}) },
+  getCurrentAppOrientation:function(){ return call('getCurrentAppOrientation',[],{orientation:innerWidth>innerHeight?'landscape':'portrait',locked:false}) },
+  getLocation:function(){ return call('getLocation',[],-1) },
+  supports:function(f){ return call('supports',[f],['inlineVideo','vpaid'].indexOf(f)>-1) },
+  playVideo:function(u){ call('playVideo',[u]); H.onCall('open',u) },
+  storePicture:function(u){ call('storePicture',[u]); fire('error','storePicture not supported','storePicture') },
+  createCalendarEvent:function(p){ call('createCalendarEvent',[p]); fire('error','createCalendarEvent not supported','createCalendarEvent') },
+  __setState:function(s){ st=s; fire('stateChange',s) },
+  __fire:fire,
+  __ready:function(){ if(st==='loading'){ st='default'; fire('ready'); fire('stateChange','default'); var i=I();
+      fire('sizeChange',i.w,i.h); fire('viewableChange',i.viewable);
+      if(i.version==='3.0') fire('exposureChange',i.viewable?100:0,{x:0,y:0,width:i.w,height:i.h},null); } }
+};
+['log','info','warn','error'].forEach(function(k){ var o=console[k]; console[k]=function(){ H.log('console.'+k+': '+[].map.call(arguments,function(a){try{return typeof a==='string'?a:JSON.stringify(a)}catch(e){return String(a)}}).join(' '),k==='error'?'err':k==='warn'?'warn':''); o&&o.apply(console,arguments) } });
+window.addEventListener('error',function(e){ H.log('error: '+(e.message||('failed to load '+(e.target&&(e.target.src||e.target.href))))+(e.filename?' ('+e.filename+':'+e.lineno+')':''),'err') },true);
+window.open = function(u){ H.log('window.open('+u+')','warn'); H.onCall('open',u); return null };
+})();`;
+}
+ 
+function frameDoc(body, d){
+  const full = d.full || state.state==='expanded';
+  return '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+    + '<style>html,body{margin:0;padding:0;overflow:hidden;background:transparent}</style>'
+    + '<script>'+shimSource()+'<\/script></head><body>' + body
+    + '<script>setTimeout(function(){mraid.__ready()},'+(+$('readyDelay').value||0)+')<\/script></body></html>';
+}
+ 
+/* ---------- loading ---------- */
+async function load(){
+  const d = dims(); state.size = d; state.state = 'loading';
+  const url = $('url').value.trim();
+  $('stage').innerHTML = '';
+  const slot = document.createElement('div'); slot.className = 'slot';
+  slot.style.width = d.w+'px'; slot.style.height = d.h+'px';
+  frame = document.createElement('iframe');
+  frame.setAttribute('scrolling','no'); frame.setAttribute('allow','autoplay; fullscreen');
+  slot.appendChild(frame);
+ 
+  let body = null;
+  if(mode==='paste'){
+    body = $('markup').value;
+    if(!body.trim()){ log('Paste some tag markup first.','warn'); return; }
+  } else {
+    if(!/^https?:\/\//i.test(url)){ log('Enter a full URL starting with http:// or https://','warn'); return; }
+    if(mode==='script'){
+      body = '<script src="'+url.replace(/"/g,'&quot;')+'"><\/script>';
+    } else {
+      try{
+        const r = await fetch(url, {mode:'cors'});
+        let html = await r.text();
+        html = html.replace(/<head([^>]*)>/i, '<head$1><base href="'+url.replace(/"/g,'&quot;')+'">');
+        body = html; log('Fetched HTML ('+html.length+' bytes), injecting with mraid','ev');
+      }catch(e){
+        log('CORS blocked the fetch, so mraid can\'t be injected. Loading as a plain iframe instead. Try "Script URL" mode or paste the markup.','err');
+        frame.src = url; placeSlot(slot, d); return;
+      }
+    }
+  }
+  log('Loading '+(mode==='paste'?'pasted markup':url)+' at '+d.w+'×'+d.h,'ev');
+  frame.srcdoc = frameDoc(body, d);
+  placeSlot(slot, d);
+  renderStatus();
+}
+function placeSlot(slot, d){
+  if(d.full || $('placement').value==='interstitial'){
+    $('overlayHost').innerHTML=''; $('overlayHost').appendChild(slot);
+    if(d.full){ slot.style.width='100vw'; slot.style.height='100vh'; }
+    $('overlay').classList.add('on');
+    $('stage').innerHTML='<p class="empty">Showing as an interstitial overlay.</p>';
+  } else $('stage').appendChild(slot);
+}
+function m(){ try{ return frame.contentWindow.mraid }catch(e){ return null } }
+ 
+/* ---------- host behaviour for mraid calls ---------- */
+let homeSlot = null;
+function handleCall(name, arg){
+  const mr = m();
+  if(name==='open'){ if(arg) window.open(arg,'_blank'); return; }
+  if(name==='customClose'){ $('xbtn').style.opacity = arg ? '0.15' : '1'; return; }
+  if(name==='expand'){
+    if(state.state!=='default' && state.state!=='resized'){ mr && mr.__fire('error','expand not allowed in state '+state.state,'expand'); return; }
+    if(arg && arg.url){ window.open(arg.url,'_blank'); }
+    const slot = frame.parentNode; homeSlot = {parent:slot.parentNode, w:slot.style.width, h:slot.style.height};
+    $('overlayHost').appendChild(slot); slot.style.width='100vw'; slot.style.height='100vh';
+    $('overlay').classList.add('on'); setState('expanded');
+    state.size = {w:innerWidth,h:innerHeight}; mr && mr.__fire('sizeChange',innerWidth,innerHeight); return;
+  }
+  if(name==='resize'){
+    if(!arg.width||!arg.height){ mr && mr.__fire('error','setResizeProperties must be called before resize','resize'); return; }
+    const slot = frame.parentNode; slot.style.width=arg.width+'px'; slot.style.height=arg.height+'px';
+    state.size={w:arg.width,h:arg.height}; setState('resized'); mr && mr.__fire('sizeChange',arg.width,arg.height); return;
+  }
+  if(name==='close') doClose();
+}
+function doClose(){
+  const mr = m(); if(!frame) return;
+  const slot = frame.parentNode;
+  if(state.state==='expanded' || state.state==='resized'){
+    if(homeSlot && state.state==='expanded'){ homeSlot.parent.appendChild(slot); slot.style.width=homeSlot.w; slot.style.height=homeSlot.h; }
+    else { const d=dims(); slot.style.width=d.w+'px'; slot.style.height=d.h+'px'; }
+    $('overlay').classList.remove('on'); state.size = dims(); setState('default');
+    mr && mr.__fire('sizeChange',state.size.w,state.size.h);
+  } else if(state.state==='default'){
+    setState('hidden'); $('overlay').classList.remove('on'); slot.style.display='none';
+    log('Ad hidden. Choose Load tag to run it again.','warn');
+  }
+}
+function setState(s){ state.state=s; const mr=m(); mr && mr.__setState(s); renderStatus(); }
+$('xbtn').addEventListener('click', ()=>{ const mr=m(); if(mr){ log('host close button tapped','warn'); doClose(); } else $('overlay').classList.remove('on'); });
+ 
+ 
+/* ---------- controls ---------- */
+$('load').addEventListener('click', load);
+$('clear').addEventListener('click', ()=>{ $('log').innerHTML=''; });
+$('toggleView').addEventListener('click', ()=>{
+  viewable=!viewable; $('toggleView').textContent='Viewable: '+(viewable?'on':'off');
+  const mr=m(); if(mr){ mr.__fire('viewableChange',viewable); if($('ver').value==='3.0'){ const i=info(); mr.__fire('exposureChange',viewable?100:0,viewable?{x:0,y:0,width:i.w,height:i.h}:null,null); } }
+  renderStatus();
+});
+$('fireReady').addEventListener('click', ()=>{ const mr=m(); if(!mr){ log('Load a tag first.','warn'); return; } if(state.state==='loading'){ mr.__ready(); state.state='default'; renderStatus(); } else mr.__fire('ready'); });
+$('forceClose').addEventListener('click', ()=>{ const mr=m(); if(mr) mr.close(); });
+ 
+/* keep host state in sync once ready fires */
+const origLog = log;
+window.__mraidHost.log = function(msg, cls){ if(msg==='event ready []' && state.state==='loading'){ state.state='default'; renderStatus(); } origLog(msg, cls); };
+ 
+/* ---------- share links ---------- */
+function shareURL(){
+  const p = new URLSearchParams();
+  p.set('mode',mode); p.set('size',$('size').value); p.set('placement',$('placement').value); p.set('v',$('ver').value);
+  if($('size').value==='custom'){ p.set('w',$('w').value); p.set('h',$('h').value); }
+  if(mode==='paste') p.set('markup',$('markup').value); else p.set('url',$('url').value.trim());
+  p.set('autoload','1');
+  return location.href.split('?')[0].split('#')[0]+'?'+p.toString();
+}
+$('copy').addEventListener('click', async ()=>{
+  const u = shareURL();
+  try{ if(navigator.share){ await navigator.share({title:'MRAID test',url:u}); return; } await navigator.clipboard.writeText(u); $('copyMsg').textContent='Link copied. Open it on your phone to load this tag.'; }
+  catch(e){ $('copyMsg').textContent=u; }
+});
+ 
+/* restore from URL */
+const q = new URLSearchParams(location.search);
+if(q.get('mode')) setMode(q.get('mode'));
+if(q.get('url')) $('url').value=q.get('url');
+if(q.get('markup')) $('markup').value=q.get('markup');
+if(q.get('size')){ $('size').value=q.get('size'); $('customBox').hidden=q.get('size')!=='custom'; }
+if(q.get('w')) $('w').value=q.get('w'); if(q.get('h')) $('h').value=q.get('h');
+if(q.get('placement')) $('placement').value=q.get('placement');
+if(q.get('v')) $('ver').value=q.get('v');
+renderStatus();
+if(q.get('autoload')) setTimeout(load, 50);
+})();
+</script>
+</body>
+</html>
